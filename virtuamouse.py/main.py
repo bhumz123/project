@@ -1,48 +1,47 @@
 import cv2
-import mediapipe as mp
-import os
-import numpy as np
-import uuid
-hand_drawing = mp.solutions.drawing_utils
-hand_drawing_styles = mp.solutions.drawing_styles
-hand_hands = mp.solutions.hands
+import mediapipe
+import pyautogui
+capture_hands=mediapipe.solutions.hands.Hands()
+drawing_option=mediapipe.solutions.drawing_utils
+screen_width,screen_height = pyautogui.size()
 
-
-# For webcam input:
-cap = cv2.VideoCapture(0)
-with hand_hands.Hands(
-    model_complexity=0,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5) as hands:
-  while cap.isOpened():
-    success, image = cap.read()
-    if not success:
-      print("Ignoring empty camera frame.")
-      # If loading a video, use 'break' instead of 'continue'.
-      continue
-
-    # To improve performance, optionally mark the image as not writeable to
-    # we need to change the color
-    image.flags.writeable = False
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    results = hands.process(image)
-
-    # Draw the hand annotations on the image.
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    if results.multi_hand_landmarks:
-      for hand_landmarks in results.multi_hand_landmarks:
-        hand_drawing.draw_landmarks(
-            image,
-            hand_landmarks,
-            hand_hands.HAND_CONNECTIONS,
-            hand_drawing_styles.get_default_hand_landmarks_style(),
-            hand_drawing_styles.get_default_hand_connections_style())
-        
-        
-    # Flip the image horizontally for a selfie-view display.
-    cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
-    if cv2.waitKey(10) & 0xFF == ord('q'):
-      break
-cap.release()
+camera=cv2.VideoCapture(0)
+while True:
+    _,image=camera.read()
+    image_height,image_width,_=image.shape
+    image=cv2.flip(image,1)
+    rbg_image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+    output_hands=capture_hands.process(rbg_image)
+    all_hands=output_hands.multi_hand_landmarks
+    if all_hands:
+        for hand in all_hands:
+            drawing_option.draw_landmarks(image,hand)
+            one_hand_landmarks=hand.landmark
+            for id , lm in enumerate(one_hand_landmarks):
+                x=int(lm.x*image_width)
+                y=int(lm.y*image_height)
+                print(x,y)
+                
+                if id == 8:
+                    mouse_x= int(screen_width / image_width * x)
+                    mouse_y= int(screen_height/image_height*y)
+                    cv2.circle(image,(x,y),10,(0,255,23))
+                    pyautogui.moveTo(mouse_x,mouse_y)
+                if id == 4:
+                    cv2.circle(image,(x,y),10,(0,255,23))
+                
+            
+                
+    cv2.imshow('IMAGE',image)
+    key=cv2.waitKey(100)
+    if key == 27:
+        break
+                
+                
+    
+camera.release()
 cv2.destroyAllWindows()
+
+
+    
+
